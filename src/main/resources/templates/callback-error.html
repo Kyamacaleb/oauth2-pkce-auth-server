@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Authorization Error</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+        .error-box {
+            background: #fff0f0;
+            border: 1px solid #ffcccc;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: monospace;
+        }
+        h2 { color: #e53935; }
+    </style>
+</head>
+<body>
+<h2>❌ Authorization Failed</h2>
+<div class="error-box">
+    <strong>Error:</strong> <span th:text="${error}"></span><br/>
+    <strong>Description:</strong> <span th:text="${errorDescription}"></span>
+</div>
+</body>
+</html>

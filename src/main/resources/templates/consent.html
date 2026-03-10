@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Authorize Application</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 500px; margin: 50px auto; padding: 20px; }
+        h2 { color: #333; }
+        .scope-item { margin: 10px 0; display: flex; align-items: center; gap: 8px; }
+        .already-approved { color: #888; font-size: 0.9em; }
+        .actions { margin-top: 20px; }
+        button { padding: 10px 24px; margin-right: 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .approve { background: #4CAF50; color: white; }
+        .approve:hover { background: #45a049; }
+        .deny { background: #e53935; color: white; }
+        .deny:hover { background: #c62828; }
+        .divider { border-top: 1px solid #ddd; margin: 15px 0; }
+    </style>
+</head>
+<body>
+
+<h2>Authorize <strong th:text="${clientName}"></strong></h2>
+<p>Signed in as <strong th:text="${principalName}"></strong></p>
+
+<form id="consentForm" action="/oauth2/authorize" method="post">
+    <input type="hidden" name="client_id"             th:value="${clientId}"/>
+    <input type="hidden" name="state"                 th:value="${rawState}"/>
+    <input type="hidden" name="redirect_uri"          th:value="${redirectUri}"/>
+    <input type="hidden" name="code_challenge"        th:value="${codeChallenge}"/>
+    <input type="hidden" name="code_challenge_method" th:value="${codeChallengeMethod}"/>
+
+    <!-- NO single scopeHidden field — scopes submitted individually -->
+
+    <div th:if="${not #lists.isEmpty(scopesToApprove)}">
+        <p>The following permissions are being requested:</p>
+        <div th:each="scope : ${scopesToApprove}" class="scope-item">
+            <input type="checkbox" name="scope" th:id="${scope}" th:value="${scope}" checked/>
+            <label th:for="${scope}" th:text="${scope}"></label>
+        </div>
+    </div>
+
+    <div th:if="${not #lists.isEmpty(previouslyApprovedScopes)}">
+        <div class="divider"></div>
+        <p class="already-approved">Already approved:</p>
+        <div th:each="scope : ${previouslyApprovedScopes}" class="scope-item already-approved">
+            ✓ <span th:text="${scope}"></span>
+        </div>
+    </div>
+
+    <div class="actions">
+        <button type="submit" class="approve">Approve</button>
+        <button type="button" class="deny" onclick="denyConsent()">Deny</button>
+    </div>
+</form>
+
+<script>
+    function denyConsent() {
+        const form = document.getElementById('consentForm');
+        // Uncheck all scopes so nothing is submitted
+        document.querySelectorAll('input[name="scope"]').forEach(cb => cb.checked = false);
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'deny';
+        input.value = 'true';
+        form.appendChild(input);
+        form.submit();
+    }
+</script>

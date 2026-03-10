@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Authorization Code</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+        .code-box {
+            background: #f4f4f4;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        h2 { color: #4CAF50; }
+        p { color: #666; }
+    </style>
+</head>
+<body>
+<h2>✅ Authorization Successful</h2>
+<p>Copy this code and use it in Postman to exchange for tokens. It expires in 10 minutes.</p>
+<div class="code-box" th:text="${code}"></div>
+</body>
+</html>
