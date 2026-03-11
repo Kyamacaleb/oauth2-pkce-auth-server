@@ -29,34 +29,30 @@ public class SecurityConfig {
         this.userDetailsService = userDetailsService;
     }
 
+    // -------------------------------------------------------------------------
+    // 1. Authorization Server filter chain (handles /oauth2/* endpoints)
+    // -------------------------------------------------------------------------
     @Bean
     @Order(1)
     public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http)
             throws Exception {
         OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
-
-        // ADD THIS - disable CSRF for the authorization server chain
         http.csrf(csrf -> csrf.disable());
 
         http.getConfigurer(OAuth2AuthorizationServerConfigurer.class)
-                .authorizationEndpoint(authorizationEndpoint ->
-                        authorizationEndpoint
-                                .consentPage("/oauth2/consent")
-                                .errorResponseHandler((request, response, exception) -> {
-                                    if (exception instanceof OAuth2AuthorizationCodeRequestAuthenticationException ex) {
-                                        System.out.println("Auth error code : " + ex.getError().getErrorCode());
-                                        System.out.println("Auth error desc : " + ex.getError().getDescription());
-                                        // ADD THESE:
-                                        System.out.println("Request params: " +
-                                                request.getParameterMap().entrySet().stream()
-                                                        .map(e -> e.getKey() + "=" + java.util.Arrays.toString(e.getValue()))
-                                                        .collect(java.util.stream.Collectors.joining(", ")));
-                                    }
-                                    response.sendError(400, exception.getMessage());
-                                })
+                .authorizationEndpoint(ep -> ep
+                        .consentPage("/oauth2/consent")
+                        .errorResponseHandler((request, response, exception) -> {
+                            if (exception instanceof OAuth2AuthorizationCodeRequestAuthenticationException ex) {
+                                System.err.println("OAuth2 auth error: " + ex.getError().getErrorCode()
+                                        + " — " + ex.getError().getDescription());
+                            }
+                            response.sendError(400, exception.getMessage());
+                        })
                 )
                 .oidc(Customizer.withDefaults());
-        http.exceptionHandling(exceptions -> exceptions
+
+        http.exceptionHandling(ex -> ex
                 .defaultAuthenticationEntryPointFor(
                         new LoginUrlAuthenticationEntryPoint("/login"),
                         new MediaTypeRequestMatcher(MediaType.TEXT_HTML)
@@ -66,22 +62,40 @@ public class SecurityConfig {
         return http.build();
     }
 
+    // -------------------------------------------------------------------------
+    // 2. Default filter chain (login page, dashboard, app registration API)
+    // -------------------------------------------------------------------------
     @Bean
     @Order(2)
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf
-                        .ignoringRequestMatchers("/api/**", "/oauth2/consent")
-                )
-                .authorizeHttpRequests(authorize -> authorize
+                .csrf(csrf -> csrf.ignoringRequestMatchers(
+                        "/api/**",
+                        "/oauth2/consent"
+                ))
+                .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/login", "/error", "/webjars/**",
-                                "/api/public/**", "/oauth2/jwks",
-                                "/oauth2/consent", "/oauth2/consent/state"
+                                "/css/**", "/js/**", "/images/**",
+                                "/api/v1/apps",
+                                "/api/v1/apps/**",
+                                "/oauth2/jwks",
+                                "/oauth2/consent",
+                                "/oauth2/consent/state"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
-                .formLogin(form -> form.loginPage("/login").permitAll())
+                .formLogin(form -> form
+                        .loginPage("/login")
+                        .usernameParameter("email")
+                        .passwordParameter("password")
+                        .defaultSuccessUrl("/dashboard", false)
+                        .permitAll()
+                )
+                .logout(logout -> logout
+                        .logoutSuccessUrl("/login?logout")
+                        .permitAll()
+                )
                 .userDetailsService(userDetailsService);
         return http.build();
     }
@@ -101,7 +115,6 @@ public class SecurityConfig {
                 .tokenRevocationEndpoint("/oauth2/revoke")
                 .jwkSetEndpoint("/oauth2/jwks")
                 .oidcUserInfoEndpoint("/connect/userinfo")
-                .oidcClientRegistrationEndpoint("/connect/register")
                 .build();
     }
 }

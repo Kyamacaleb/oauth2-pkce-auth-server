@@ -41,7 +41,7 @@ public class JpaOAuth2AuthorizationConsentService implements OAuth2Authorization
     public void save(OAuth2AuthorizationConsent authorizationConsent) {
         Assert.notNull(authorizationConsent, "authorizationConsent cannot be null");
 
-        var user = userRepository.findByUsername(authorizationConsent.getPrincipalName())
+        var user = userRepository.findByEmail(authorizationConsent.getPrincipalName())
                 .orElseThrow(() -> new DataRetrievalFailureException(
                         "User not found: " + authorizationConsent.getPrincipalName()));
 
@@ -69,7 +69,7 @@ public class JpaOAuth2AuthorizationConsentService implements OAuth2Authorization
     public void remove(OAuth2AuthorizationConsent authorizationConsent) {
         Assert.notNull(authorizationConsent, "authorizationConsent cannot be null");
 
-        var user = userRepository.findByUsername(authorizationConsent.getPrincipalName())
+        var user = userRepository.findByEmail(authorizationConsent.getPrincipalName())
                 .orElseThrow(() -> new DataRetrievalFailureException("User not found"));
 
         OAuthClient client = resolveClient(authorizationConsent.getRegisteredClientId());
@@ -83,7 +83,7 @@ public class JpaOAuth2AuthorizationConsentService implements OAuth2Authorization
         Assert.hasText(registeredClientId, "registeredClientId cannot be empty");
         Assert.hasText(principalName, "principalName cannot be empty");
 
-        var user = userRepository.findByUsername(principalName).orElse(null);
+        var user = userRepository.findByEmail(principalName).orElse(null);
         if (user == null) return null;
 
         OAuthClient client = resolveClientOrNull(registeredClientId);

@@ -1,67 +1,259 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
-    <title>Authorize Application</title>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Authorize · OAuth2 Server</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 500px; margin: 50px auto; padding: 20px; }
-        h2 { color: #333; }
-        .scope-item { margin: 10px 0; display: flex; align-items: center; gap: 8px; }
-        .already-approved { color: #888; font-size: 0.9em; }
-        .actions { margin-top: 20px; }
-        button { padding: 10px 24px; margin-right: 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
-        .approve { background: #4CAF50; color: white; }
-        .approve:hover { background: #45a049; }
-        .deny { background: #e53935; color: white; }
-        .deny:hover { background: #c62828; }
-        .divider { border-top: 1px solid #ddd; margin: 15px 0; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0d0f14;
+            --surface: #13161d;
+            --border: #1f2330;
+            --text: #e8eaf0;
+            --muted: #6b7280;
+            --accent: #3d8bff;
+            --success: #34d399;
+            --danger: #f87171;
+            --mono: 'DM Mono', monospace;
+            --sans: 'DM Sans', sans-serif;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--sans);
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 1.5rem;
+            background-image:
+                    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(61,139,255,0.06) 0%, transparent 70%);
+        }
+
+        .card {
+            width: 100%;
+            max-width: 440px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2.5rem;
+            animation: fadeUp 0.35s ease both;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 2rem;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #3d8bff, #6366f1);
+            border-radius: 8px;
+            display: grid;
+            place-items: center;
+            font-size: 18px;
+        }
+
+        .logo-text {
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.4rem;
+        }
+
+        .subtitle {
+            color: var(--muted);
+            font-size: 0.88rem;
+            margin-bottom: 1.75rem;
+        }
+
+        .app-name {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .user-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(61,139,255,0.08);
+            border: 1px solid rgba(61,139,255,0.2);
+            border-radius: 999px;
+            padding: 0.3rem 0.85rem;
+            font-size: 0.8rem;
+            color: var(--accent);
+            font-family: var(--mono);
+            margin-bottom: 1.5rem;
+        }
+
+        .section-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.75rem;
+        }
+
+        .scope-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            background: var(--bg);
+            cursor: pointer;
+            transition: border-color 0.15s;
+        }
+
+        .scope-item:hover { border-color: var(--accent); }
+
+        .scope-item input[type="checkbox"] {
+            margin-top: 2px;
+            accent-color: var(--accent);
+            width: 15px;
+            height: 15px;
+            flex-shrink: 0;
+        }
+
+        .scope-name {
+            font-family: var(--mono);
+            font-size: 0.82rem;
+            color: var(--text);
+        }
+
+        .divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 1.25rem 0;
+        }
+
+        .already-approved {
+            padding: 0.5rem 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
+            color: var(--muted);
+            font-family: var(--mono);
+        }
+
+        .check-icon { color: var(--success); }
+
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-top: 1.75rem;
+        }
+
+        .btn {
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-family: var(--sans);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: opacity 0.15s, transform 0.1s;
+        }
+
+        .btn:active { transform: scale(0.98); }
+
+        .btn-approve {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .btn-deny {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--muted);
+        }
+
+        .btn-deny:hover { border-color: var(--danger); color: var(--danger); }
     </style>
 </head>
 <body>
 
-<h2>Authorize <strong th:text="${clientName}"></strong></h2>
-<p>Signed in as <strong th:text="${principalName}"></strong></p>
+<div class="card">
 
-<form id="consentForm" action="/oauth2/authorize" method="post">
-    <input type="hidden" name="client_id"             th:value="${clientId}"/>
-    <input type="hidden" name="state"                 th:value="${rawState}"/>
-    <input type="hidden" name="redirect_uri"          th:value="${redirectUri}"/>
-    <input type="hidden" name="code_challenge"        th:value="${codeChallenge}"/>
-    <input type="hidden" name="code_challenge_method" th:value="${codeChallengeMethod}"/>
+    <div class="logo">
+        <div class="logo-icon">🔐</div>
+        <span class="logo-text">oauth2 / consent</span>
+    </div>
 
-    <!-- NO single scopeHidden field — scopes submitted individually -->
+    <h1><span class="app-name" th:text="${clientName}">My App</span> wants access</h1>
+    <p class="subtitle">Review the permissions this application is requesting.</p>
 
-    <div th:if="${not #lists.isEmpty(scopesToApprove)}">
-        <p>The following permissions are being requested:</p>
-        <div th:each="scope : ${scopesToApprove}" class="scope-item">
-            <input type="checkbox" name="scope" th:id="${scope}" th:value="${scope}" checked/>
-            <label th:for="${scope}" th:text="${scope}"></label>
+    <div class="user-pill">
+        👤 <span th:text="${principalName}">user@example.com</span>
+    </div>
+
+    <form id="consentForm" action="/oauth2/authorize" method="post">
+        <input type="hidden" name="client_id"             th:value="${clientId}"/>
+        <input type="hidden" name="state"                 th:value="${rawState}"/>
+        <input type="hidden" name="redirect_uri"          th:value="${redirectUri}"/>
+        <input type="hidden" name="code_challenge"        th:value="${codeChallenge}"/>
+        <input type="hidden" name="code_challenge_method" th:value="${codeChallengeMethod}"/>
+
+        <div th:each="scope : ${scopesToApprove}" class="scope-item"
+             th:data-target="|scope_${scope}|"
+             onclick="document.getElementById(this.dataset.target).click()">
+            <input type="checkbox" name="scope"
+                   th:id="|scope_${scope}|"
+                   th:value="${scope}"
+                   checked
+                   onclick="event.stopPropagation()"/>
+            <span class="scope-name" th:text="${scope}">read:profile</span>
         </div>
-    </div>
 
-    <div th:if="${not #lists.isEmpty(previouslyApprovedScopes)}">
-        <div class="divider"></div>
-        <p class="already-approved">Already approved:</p>
-        <div th:each="scope : ${previouslyApprovedScopes}" class="scope-item already-approved">
-            ✓ <span th:text="${scope}"></span>
+        <div th:if="${not #lists.isEmpty(previouslyApprovedScopes)}">
+            <hr class="divider"/>
+            <p class="section-label">Already approved</p>
+            <div th:each="scope : ${previouslyApprovedScopes}" class="already-approved">
+                <span class="check-icon">✓</span>
+                <span th:text="${scope}">openid</span>
+            </div>
         </div>
-    </div>
 
-    <div class="actions">
-        <button type="submit" class="approve">Approve</button>
-        <button type="button" class="deny" onclick="denyConsent()">Deny</button>
-    </div>
-</form>
+        <div class="actions">
+            <button type="submit" class="btn btn-approve">Approve</button>
+            <button type="button" class="btn btn-deny" onclick="denyConsent()">Deny</button>
+        </div>
+    </form>
+</div>
 
 <script>
     function denyConsent() {
-        const form = document.getElementById('consentForm');
-        // Uncheck all scopes so nothing is submitted
         document.querySelectorAll('input[name="scope"]').forEach(cb => cb.checked = false);
         const input = document.createElement('input');
         input.type = 'hidden';
         input.name = 'deny';
         input.value = 'true';
-        form.appendChild(input);
-        form.submit();
+        document.getElementById('consentForm').appendChild(input);
+        document.getElementById('consentForm').submit();
     }
 </script>
+</body>
+</html>
