@@ -59,13 +59,9 @@ public class User implements UserDetails {
         updatedAt = LocalDateTime.now();
     }
 
-    // -------------------------------------------------------------------------
-    // Spring Security — we use email as the username
-    // -------------------------------------------------------------------------
-
     @Override
     public String getUsername() {
-        return email; // email IS the username
+        return email;
     }
 
     @Override

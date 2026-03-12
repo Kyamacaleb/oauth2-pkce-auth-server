@@ -8,8 +8,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.jwt.JwtEncoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -20,9 +18,8 @@ import java.util.UUID;
 
 /**
  * Infrastructure beans with NO dependencies on other application beans.
- * Kept separate from SecurityConfig to prevent circular dependency chains:
- * By defining PasswordEncoder, JWKSource, and JwtEncoder here, Spring can
- * instantiate them first before any other beans are constructed.
+ * Kept separate from SecurityConfig to prevent circular dependency chains.
+ * NOTE: RSA keys regenerate on every restart
  */
 @Configuration
 public class AppConfig {
@@ -32,16 +29,10 @@ public class AppConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // -------------------------------------------------------------------------
-    // RSA key pair + JWK source
-    // NOTE: Keys are regenerated on every restart — fine for dev/testing.
-    // For production, load from a persistent keystore or secrets manager.
-    // -------------------------------------------------------------------------
-
     @Bean
     public JWKSource<SecurityContext> jwkSource() {
         KeyPair keyPair = generateRsaKey();
-        RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
+        RSAPublicKey  publicKey  = (RSAPublicKey)  keyPair.getPublic();
         RSAPrivateKey privateKey = (RSAPrivateKey) keyPair.getPrivate();
 
         RSAKey rsaKey = new RSAKey.Builder(publicKey)
@@ -50,12 +41,7 @@ public class AppConfig {
                 .build();
 
         JWKSet jwkSet = new JWKSet(rsaKey);
-        return (jwkSelector, securityContext) -> jwkSelector.select(jwkSet);
-    }
-
-    @Bean
-    public JwtEncoder jwtEncoder(JWKSource<SecurityContext> jwkSource) {
-        return new NimbusJwtEncoder(jwkSource);
+        return (jwkSelector, ctx) -> jwkSelector.select(jwkSet);
     }
 
     private static KeyPair generateRsaKey() {

@@ -11,7 +11,6 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationException;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
@@ -29,59 +28,45 @@ public class SecurityConfig {
         this.userDetailsService = userDetailsService;
     }
 
-    // -------------------------------------------------------------------------
-    // 1. Authorization Server filter chain (handles /oauth2/* endpoints)
-    // -------------------------------------------------------------------------
+    // 1. Authorization Server filter chain  (/oauth2/* endpoints)
     @Bean
     @Order(1)
     public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http)
             throws Exception {
+
         OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
         http.csrf(csrf -> csrf.disable());
 
         http.getConfigurer(OAuth2AuthorizationServerConfigurer.class)
-                .authorizationEndpoint(ep -> ep
-                        .consentPage("/oauth2/consent")
-                        .errorResponseHandler((request, response, exception) -> {
-                            if (exception instanceof OAuth2AuthorizationCodeRequestAuthenticationException ex) {
-                                System.err.println("OAuth2 auth error: " + ex.getError().getErrorCode()
-                                        + " — " + ex.getError().getDescription());
-                            }
-                            response.sendError(400, exception.getMessage());
-                        })
-                )
                 .oidc(Customizer.withDefaults());
 
+        // Redirect unauthenticated browser requests to the login page
         http.exceptionHandling(ex -> ex
                 .defaultAuthenticationEntryPointFor(
                         new LoginUrlAuthenticationEntryPoint("/login"),
                         new MediaTypeRequestMatcher(MediaType.TEXT_HTML)
                 )
         );
+
+        // Allow the resource server to validate JWTs (used by /connect/userinfo)
         http.oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+
         return http.build();
     }
 
-    // -------------------------------------------------------------------------
-    // 2. Default filter chain (login page, dashboard, app registration API)
-    // -------------------------------------------------------------------------
+    // 2. Default filter chain  (login, welcome, dashboard, callback)
     @Bean
     @Order(2)
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.ignoringRequestMatchers(
-                        "/api/**",
-                        "/oauth2/consent"
-                ))
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/logout"))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/login", "/error", "/webjars/**",
-                                "/css/**", "/js/**", "/images/**",
-                                "/api/v1/apps",
-                                "/api/v1/apps/**",
-                                "/oauth2/jwks",
-                                "/oauth2/consent",
-                                "/oauth2/consent/state"
+                                "/",
+                                "/login", "/error",
+                                "/webjars/**", "/css/**", "/js/**", "/images/**",
+                                "/callback",
+                                "/oauth2/jwks"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
@@ -89,7 +74,8 @@ public class SecurityConfig {
                         .loginPage("/login")
                         .usernameParameter("email")
                         .passwordParameter("password")
-                        .defaultSuccessUrl("/dashboard", false)
+                        // After login, start the PKCE flow server-side
+                        .defaultSuccessUrl("/start-auth", true)
                         .permitAll()
                 )
                 .logout(logout -> logout
@@ -97,14 +83,17 @@ public class SecurityConfig {
                         .permitAll()
                 )
                 .userDetailsService(userDetailsService);
+
         return http.build();
     }
 
+    // JWT decoder (used by the Authorization Server for /connect/userinfo)
     @Bean
     public JwtDecoder jwtDecoder(JWKSource<SecurityContext> jwkSource) {
         return OAuth2AuthorizationServerConfiguration.jwtDecoder(jwkSource);
     }
 
+    // Authorization Server settings
     @Bean
     public AuthorizationServerSettings authorizationServerSettings() {
         return AuthorizationServerSettings.builder()
