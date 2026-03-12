@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Create Account · OAuth2 Server</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --ink: #0a0a0b; --paper: #f4f1eb; --accent: #c8f03c;
+            --mid: #888; --border: #d4d0c8; --border-focus: #0a0a0b;
+            --error-bg: #fff0f0; --error-border: #e0a0a0; --error-text: #c0392b;
+            --success-bg: #f0fff4; --success-border: #a0d8b0; --success-text: #27642a;
+            --mono: 'JetBrains Mono', monospace; --display: 'Syne', sans-serif;
+        }
+        body {
+            background: var(--paper); color: var(--ink); font-family: var(--display);
+            min-height: 100vh; display: grid; place-items: center; padding: 2rem;
+        }
+        body::before {
+            content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+        }
+        .container {
+            width: 100%; max-width: 460px; position: relative; z-index: 1;
+            animation: appear 0.4s ease both;
+        }
+        @keyframes appear {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .back-link {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            font-family: var(--mono); font-size: 0.72rem; color: var(--mid);
+            text-decoration: none; letter-spacing: 0.06em; margin-bottom: 2rem;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: var(--ink); }
+        .card {
+            background: #fff; border: 1px solid var(--border); border-radius: 6px;
+            padding: 2.5rem; box-shadow: 0 2px 24px rgba(0,0,0,0.06);
+        }
+        .eyebrow {
+            font-family: var(--mono); font-size: 0.68rem; color: var(--mid);
+            letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 0.6rem;
+        }
+        h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 1.75rem; }
+        .alert {
+            padding: 0.8rem 1rem; border-radius: 4px; font-family: var(--mono);
+            font-size: 0.76rem; margin-bottom: 1.5rem; border: 1px solid; line-height: 1.5;
+        }
+        .alert-error   { background: var(--error-bg);   border-color: var(--error-border);   color: var(--error-text); }
+        .alert-success { background: var(--success-bg);  border-color: var(--success-border); color: var(--success-text); }
+        .field { margin-bottom: 1.2rem; }
+        label {
+            display: block; font-family: var(--mono); font-size: 0.68rem; font-weight: 500;
+            color: var(--mid); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.5rem;
+        }
+        input {
+            width: 100%; background: var(--paper); border: 1px solid var(--border);
+            border-radius: 4px; color: var(--ink); font-family: var(--mono); font-size: 0.9rem;
+            padding: 0.8rem 1rem; outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        input:focus { border-color: var(--border-focus); box-shadow: 0 0 0 3px rgba(10,10,11,0.08); }
+        input.is-invalid { border-color: var(--error-border); background: var(--error-bg); }
+        input.is-valid   { border-color: #b0d8b8; }
+        .field-hint { font-family: var(--mono); font-size: 0.7rem; margin-top: 0.35rem; color: var(--mid); }
+        .field-hint.invalid { color: var(--error-text); }
+        .divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+        .btn-submit {
+            width: 100%; background: var(--ink); color: var(--accent);
+            font-family: var(--mono); font-size: 0.82rem; font-weight: 500;
+            letter-spacing: 0.1em; text-transform: uppercase; padding: 1rem;
+            border: 2px solid var(--ink); border-radius: 4px; cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .btn-submit:hover  { background: #222; }
+        .btn-submit:active { transform: scale(0.99); }
+        .footer-note {
+            margin-top: 1.5rem; font-family: var(--mono); font-size: 0.7rem;
+            color: var(--mid); text-align: center; line-height: 1.6;
+        }
+        .footer-note a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--border); }
+        .footer-note a:hover { border-color: var(--ink); }
+        .strength-bar { margin-top: 0.5rem; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+        .strength-fill { height: 100%; border-radius: 2px; transition: width 0.3s, background 0.3s; width: 0; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a href="/login" class="back-link">← Back to sign in</a>
+
+    <div class="card">
+        <p class="eyebrow">OAuth2 Server</p>
+        <h1>Create account</h1>
+
+        <!-- Server-side errors -->
+        <div th:if="${emailTaken}" class="alert alert-error">
+            That email address is already registered. <a href="/login">Sign in instead?</a>
+        </div>
+        <div th:if="${passwordMismatch}" class="alert alert-error">
+            Passwords do not match. Please try again.
+        </div>
+
+        <form th:action="@{/register}" th:object="${form}" method="post" id="regForm" novalidate>
+
+            <div class="field">
+                <label for="fullName">Full name</label>
+                <input type="text" id="fullName" th:field="*{fullName}"
+                       placeholder="Jane Smith" autocomplete="name" required/>
+                <div class="field-hint invalid"
+                     th:if="${#fields.hasErrors('fullName')}"
+                     th:errors="*{fullName}">Name error</div>
+                <div class="field-hint" id="nameHint"></div>
+            </div>
+
+            <div class="field">
+                <label for="email">Email address</label>
+                <input type="email" id="email" th:field="*{email}"
+                       placeholder="you@example.com" autocomplete="email" required/>
+                <div class="field-hint invalid"
+                     th:if="${#fields.hasErrors('email')}"
+                     th:errors="*{email}">Email error</div>
+                <div class="field-hint" id="emailHint"></div>
+            </div>
+
+            <div class="field">
+                <label for="password">Password</label>
+                <input type="password" id="password" th:field="*{password}"
+                       placeholder="••••••••" autocomplete="new-password" minlength="8" required/>
+                <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+                <div class="field-hint" id="passHint">Minimum 8 characters</div>
+            </div>
+
+            <div class="field">
+                <label for="confirmPassword">Confirm password</label>
+                <input type="password" id="confirmPassword" th:field="*{confirmPassword}"
+                       placeholder="••••••••" autocomplete="new-password" required/>
+                <div class="field-hint" id="confirmHint"></div>
+            </div>
+
+            <hr class="divider"/>
+            <button type="submit" class="btn-submit">Create account →</button>
+        </form>
+
+        <p class="footer-note">
+            Already have an account? <a href="/login">Sign in</a>
+        </p>
+    </div>
+</div>
+
+<script>
+    const nameEl    = document.getElementById('fullName');
+    const emailEl   = document.getElementById('email');
+    const passEl    = document.getElementById('password');
+    const confirmEl = document.getElementById('confirmPassword');
+    const nameHint  = document.getElementById('nameHint');
+    const emailHint = document.getElementById('emailHint');
+    const passHint  = document.getElementById('passHint');
+    const confirmHint = document.getElementById('confirmHint');
+    const fill      = document.getElementById('strengthFill');
+    const form      = document.getElementById('regForm');
+
+    const isEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
+    // Password strength
+    passEl.addEventListener('input', () => {
+        const v = passEl.value;
+        let score = 0;
+        if (v.length >= 8)  score++;
+        if (v.length >= 12) score++;
+        if (/[A-Z]/.test(v) && /[a-z]/.test(v)) score++;
+        if (/[0-9]/.test(v)) score++;
+        if (/[^A-Za-z0-9]/.test(v)) score++;
+
+        const colors = ['#e74c3c','#e67e22','#f1c40f','#2ecc71','#27ae60'];
+        const labels = ['Very weak','Weak','Fair','Strong','Very strong'];
+        fill.style.width = (score * 20) + '%';
+        fill.style.background = colors[score - 1] || '#d4d0c8';
+        passHint.textContent = score > 0 ? labels[score - 1] : 'Minimum 8 characters';
+    });
+
+    passEl.addEventListener('blur', () => {
+        if (passEl.value.length < 8) {
+            passEl.className = 'is-invalid';
+        } else {
+            passEl.className = 'is-valid';
+        }
+    });
+
+    confirmEl.addEventListener('blur', () => {
+        if (confirmEl.value !== passEl.value) {
+            confirmEl.className = 'is-invalid';
+            confirmHint.textContent = 'Passwords do not match.';
+            confirmHint.className = 'field-hint invalid';
+        } else {
+            confirmEl.className = 'is-valid';
+            confirmHint.textContent = '';
+        }
+    });
+
+    emailEl.addEventListener('blur', () => {
+        if (!isEmail(emailEl.value.trim())) {
+            emailEl.className = 'is-invalid';
+            emailHint.textContent = 'Enter a valid email address.';
+            emailHint.className = 'field-hint invalid';
+        } else {
+            emailEl.className = 'is-valid';
+            emailHint.textContent = '';
+        }
+    });
+
+    form.addEventListener('submit', e => {
+        let ok = true;
+        if (!nameEl.value.trim()) {
+            nameEl.className = 'is-invalid';
+            nameHint.textContent = 'Full name is required.';
+            nameHint.className = 'field-hint invalid';
+            ok = false;
+        }
+        if (!isEmail(emailEl.value.trim())) {
+            emailEl.className = 'is-invalid';
+            emailHint.textContent = 'Enter a valid email address.';
+            emailHint.className = 'field-hint invalid';
+            ok = false;
+        }
+        if (passEl.value.length < 8) {
+            passEl.className = 'is-invalid';
+            ok = false;
+        }
+        if (confirmEl.value !== passEl.value) {
+            confirmEl.className = 'is-invalid';
+            confirmHint.textContent = 'Passwords do not match.';
+            confirmHint.className = 'field-hint invalid';
+            ok = false;
+        }
+        if (!ok) e.preventDefault();
+    });
+</script>
+</body>
+</html>

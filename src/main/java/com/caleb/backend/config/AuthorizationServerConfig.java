@@ -19,9 +19,14 @@ import java.util.List;
 
 /**
  * Wires Spring Authorization Server to PostgreSQL via JDBC.
- * The ObjectMapper registered here includes a Mixin for our User class so
- * that Spring AS can deserialize the stored principal without hitting the
- * Jackson security allowlist error.
+ *
+ * Three services backed by the tables from V3 migration:
+ *   RegisteredClientRepository        → oauth2_registered_client
+ *   OAuth2AuthorizationService        → oauth2_authorization
+ *   OAuth2AuthorizationConsentService → oauth2_authorization_consent
+ *
+ * The custom ObjectMapper with UserMixin solves the Jackson allowlist error
+ * when Spring AS deserializes the stored principal back from JSON.
  */
 @Configuration
 public class AuthorizationServerConfig {
@@ -39,19 +44,15 @@ public class AuthorizationServerConfig {
         JdbcOAuth2AuthorizationService service =
                 new JdbcOAuth2AuthorizationService(jdbcOperations, registeredClientRepository);
 
-        // Build an ObjectMapper that knows about our User class
         JdbcOAuth2AuthorizationService.OAuth2AuthorizationRowMapper rowMapper =
                 new JdbcOAuth2AuthorizationService.OAuth2AuthorizationRowMapper(registeredClientRepository);
 
         ObjectMapper objectMapper = new ObjectMapper();
         ClassLoader classLoader = AuthorizationServerConfig.class.getClassLoader();
 
-        // Register all Spring Security Jackson modules
         List<Module> modules = SecurityJackson2Modules.getModules(classLoader);
         objectMapper.registerModules(modules);
         objectMapper.registerModule(new OAuth2AuthorizationServerJackson2Module());
-
-        // tell Jackson our User class is safe
         objectMapper.addMixIn(User.class, UserMixin.class);
 
         rowMapper.setObjectMapper(objectMapper);

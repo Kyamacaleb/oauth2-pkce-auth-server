@@ -3,6 +3,7 @@ package com.caleb.backend.config;
 import com.caleb.backend.security.UserDetailsServiceImpl;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -24,23 +25,24 @@ public class SecurityConfig {
 
     private final UserDetailsServiceImpl userDetailsService;
 
+    @Value("${app.base-url:http://localhost:8080}")
+    private String appBaseUrl;
+
     public SecurityConfig(UserDetailsServiceImpl userDetailsService) {
         this.userDetailsService = userDetailsService;
     }
 
-    // 1. Authorization Server filter chain  (/oauth2/* endpoints)
+    // 1. Authorization Server filter chain
     @Bean
     @Order(1)
     public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http)
             throws Exception {
 
         OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
-        http.csrf(csrf -> csrf.disable());
 
         http.getConfigurer(OAuth2AuthorizationServerConfigurer.class)
                 .oidc(Customizer.withDefaults());
 
-        // Redirect unauthenticated browser requests to the login page
         http.exceptionHandling(ex -> ex
                 .defaultAuthenticationEntryPointFor(
                         new LoginUrlAuthenticationEntryPoint("/login"),
@@ -48,25 +50,29 @@ public class SecurityConfig {
                 )
         );
 
-        // Allow the resource server to validate JWTs (used by /connect/userinfo)
         http.oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
 
         return http.build();
     }
 
-    // 2. Default filter chain  (login, welcome, dashboard, callback)
+    // 2. Default filter chain
     @Bean
     @Order(2)
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/logout"))
+                .csrf(csrf -> csrf
+                        .ignoringRequestMatchers("/oauth2/token", "/oauth2/revoke")
+                )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/",
-                                "/login", "/error",
+                                "/login",
+                                "/register",
+                                "/error",
                                 "/webjars/**", "/css/**", "/js/**", "/images/**",
                                 "/callback",
-                                "/oauth2/jwks"
+                                "/oauth2/jwks",
+                                "/actuator/health"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
@@ -74,20 +80,26 @@ public class SecurityConfig {
                         .loginPage("/login")
                         .usernameParameter("email")
                         .passwordParameter("password")
-                        // After login, start the PKCE flow server-side
                         .defaultSuccessUrl("/start-auth", true)
+                        .failureUrl("/login?error")
                         .permitAll()
                 )
                 .logout(logout -> logout
+                        .logoutUrl("/logout")
                         .logoutSuccessUrl("/login?logout")
+                        .invalidateHttpSession(true)
+                        .deleteCookies("OAUTH2SESSION")
                         .permitAll()
+                )
+                .sessionManagement(session -> session
+                        .sessionFixation().migrateSession()
                 )
                 .userDetailsService(userDetailsService);
 
         return http.build();
     }
 
-    // JWT decoder (used by the Authorization Server for /connect/userinfo)
+    // JWT decoder
     @Bean
     public JwtDecoder jwtDecoder(JWKSource<SecurityContext> jwkSource) {
         return OAuth2AuthorizationServerConfiguration.jwtDecoder(jwkSource);
@@ -97,7 +109,7 @@ public class SecurityConfig {
     @Bean
     public AuthorizationServerSettings authorizationServerSettings() {
         return AuthorizationServerSettings.builder()
-                .issuer("http://localhost:8080")
+                .issuer(appBaseUrl)
                 .authorizationEndpoint("/oauth2/authorize")
                 .tokenEndpoint("/oauth2/token")
                 .tokenIntrospectionEndpoint("/oauth2/introspect")

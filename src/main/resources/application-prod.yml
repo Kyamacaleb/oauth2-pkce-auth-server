@@ -1,0 +1,31 @@
+# =============================================================================
+# Production profile  (activated via SPRING_PROFILES_ACTIVE=prod)
+# ALL sensitive values come from environment variables — never hardcoded here.
+# =============================================================================
+
+spring:
+  datasource:
+    url:      ${DB_URL}           # e.g. jdbc:postgresql://db:5432/oauth2_pkce_db
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle:      5
+
+  jpa:
+    show-sql: false
+
+server:
+  servlet:
+    session:
+      cookie:
+        secure:    true    # HTTPS only in production
+        same-site: Strict
+
+app:
+  base-url: ${APP_BASE_URL}    # e.g. https://auth.yourdomain.com
+
+logging:
+  level:
+    root:              WARN
+    com.caleb.backend: INFO

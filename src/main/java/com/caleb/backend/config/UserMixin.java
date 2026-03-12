@@ -6,10 +6,13 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 /**
- * Spring Authorization Server serializes the entire OAuth2Authorization
- * (including the principal) to JSON when storing it in the DB. When it
- * reads it back, Spring Security's Jackson allowlist blocks unknown classes.
- * Registering this Mixin tells Jackson: "User is safe to deserialize".
+ * Jackson Mixin that registers com.caleb.backend.model.User on Spring
+ * Security's Jackson allowlist.
+ *
+ * Spring AS serializes the full OAuth2Authorization (including the
+ * authenticated principal) to JSON when storing it in Postgres. On read-back,
+ * Jackson's security module rejects unknown classes. This Mixin tells it
+ * that User is safe to deserialize.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
 @JsonAutoDetect(
